@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  username       String    @unique
+  password       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  failedAttempts Int       @default(0)
+  lockoutUntil   DateTime?
+}
+
+model Carrera {
+  id                 Int      @id @default(autoincrement())
+  nombre             String
+  facultad           String
+  duracion           String
+  modalidad          String
+  descripcion        String   @db.Text
+  imagen             String?
+  imagenes           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  activa             Boolean  @default(true)
+  inscripcionAbierta Boolean  @default(true)
+  tipo               String   @default("Carrera")
+  linkInscripcion    String?
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model Novedad {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  categoria String
+  fecha     DateTime
+  contenido String   @db.Text
+  imagen    String?
+  imagenes  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  destacada Boolean  @default(false)
+  video     String?
+  videos    Json?    // Stores array of video URLs
+  color     String?  // Custom highlight color (e.g., hex code or tailwind class)
+}
