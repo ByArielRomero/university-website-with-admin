@@ -13,6 +13,7 @@ import {
   MessageCircle, ArrowRight, Filter, Newspaper, PartyPopper,
   FileText, BookMarked, X, ChevronLeft, ChevronDown, Image as ImageIcon, Star, Play, Maximize2, Layers
 } from "lucide-react"
+import { defaultHistoriaTexto } from "./defaultHistoria"
 
 interface CarreraExtended extends Carrera {
   activa?: boolean
@@ -69,7 +70,7 @@ export default function Home() {
   const [historiaExpanded, setHistoriaExpanded] = useState(false)
   const [historia, setHistoria] = useState<HistoriaConfig>({
     titulo: "Creciendo junto a la comunidad",
-    texto: "El Complejo Universitario Municipal nace para brindar oportunidades reales de formación superior en Exaltación de la Cruz.",
+    texto: defaultHistoriaTexto,
     imagen: "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg",
     galeria: []
   })
@@ -94,7 +95,7 @@ export default function Home() {
           if (inscConfig) setInscripcionesActive(inscConfig.isActive)
           setHistoria({
             titulo: cfg['historia_titulo'] || "Creciendo junto a la comunidad",
-            texto: cfg['historia_texto'] || "El Complejo Universitario Municipal nace para brindar oportunidades reales de formación superior en Exaltación de la Cruz.",
+            texto: cfg['historia_texto'] || defaultHistoriaTexto,
             imagen: cfg['historia_imagen'] || "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg",
             galeria: cfg['historia_galeria'] ? JSON.parse(cfg['historia_galeria']) : []
           })
@@ -327,7 +328,7 @@ export default function Home() {
                 <div
                   className={`whitespace-pre-wrap transition-all duration-500 overflow-hidden ${historiaExpanded ? '' : 'line-clamp-6'}`}
                 >
-                  {historia.texto || "El Complejo Universitario Municipal nace para brindar oportunidades reales de formación superior en Exaltación de la Cruz."}
+                  {historia.texto || defaultHistoriaTexto}
                 </div>
                 {(historia.texto || '').length > 300 && (
                   <button

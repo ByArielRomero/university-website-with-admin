@@ -36,7 +36,7 @@ model Carrera {
 
 model SystemConfig {
   key       String   @id
-  value     String
+  value     String   @db.LongText
   isActive  Boolean  @default(true)
   updatedAt DateTime @updatedAt
 }

@@ -8,6 +8,7 @@ import {
     LogOut, Home, Clock, Award, Image as ImageIcon, X, Save,
     ChevronLeft, ChevronRight, Upload, HelpCircle, Settings, Star, Video, CheckCircle2
 } from "lucide-react"
+import { defaultHistoriaTexto } from "../../defaultHistoria"
 
 interface Carrera {
     id: number
@@ -1108,7 +1109,7 @@ function ConfigTab() {
                     if (inscConfig) setInscripcionesActive(inscConfig.isActive)
                     setHistoriaForm({
                         titulo: cfg['historia_titulo'] || '',
-                        texto: cfg['historia_texto'] || '',
+                        texto: cfg['historia_texto'] || defaultHistoriaTexto,
                         imagen: cfg['historia_imagen'] || '',
                         galeria: cfg['historia_galeria'] ? JSON.parse(cfg['historia_galeria']) : [],
                     })
