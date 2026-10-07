@@ -219,6 +219,14 @@ export function saveNovedades(novedades: Novedad[]) {
 
 export function helperFormatDate(dateString: string): string {
     if (!dateString) return ""
-    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" }
-    return new Date(dateString).toLocaleDateString("es-ES", options)
+    // Parse date parts directly to avoid timezone shift from UTC midnight
+    const parts = dateString.split('T')[0].split('-').map(Number);
+    if (parts.length === 3) {
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
+        const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
+        return date.toLocaleDateString("es-ES", options);
+    }
+    // Fallback
+    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString("es-ES", options);
 }

@@ -204,7 +204,7 @@ export default function Home() {
 
             <div className="hidden md:flex items-center gap-1">
               {["Inicio", "Historia", "Carreras", "Novedades", "Contacto"].map((item) => (
-                <Link key={item} href={`#${item.toLowerCase()}`} className={`px-3 md:px-4 lg:px-5 py-2.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-wider transition-all hover:bg-white/10 ${scrolled ? "text-gray-600 hover:text-[#004d91]" : "text-white/80 hover:text-white"}`}>
+                <Link key={item} href={item === "Historia" ? "/historia" : `#${item.toLowerCase()}`} className={`px-3 md:px-4 lg:px-5 py-2.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-wider transition-all hover:bg-white/10 ${scrolled ? "text-gray-600 hover:text-[#004d91]" : "text-white/80 hover:text-white"}`}>
                   {item}
                 </Link>
               ))}
@@ -227,7 +227,7 @@ export default function Home() {
           </div>
           <nav className="flex flex-col gap-1">
             {["Inicio", "Historia", "Carreras", "Novedades", "Contacto"].map((item) => (
-              <Link key={item} href={`#${item.toLowerCase()}`} className="p-4 rounded-xl text-base font-black text-gray-800 hover:bg-blue-50 transition-all flex justify-between items-center uppercase tracking-tight" onClick={closeMenu}>
+              <Link key={item} href={item === "Historia" ? "/historia" : `#${item.toLowerCase()}`} className="p-4 rounded-xl text-base font-black text-gray-800 hover:bg-blue-50 transition-all flex justify-between items-center uppercase tracking-tight" onClick={closeMenu}>
                 {item} <ChevronRight className="w-4 h-4 opacity-20" />
               </Link>
             ))}
@@ -265,7 +265,7 @@ export default function Home() {
               <Link href="#carreras" className="px-8 py-3.5 rounded-xl bg-white text-[#004d91] font-black transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-[11px] tracking-widest uppercase">
                 Ver Carreras <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="#historia" className="px-8 py-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-black text-[11px] tracking-widest uppercase hover:bg-white/20 transition-all">
+              <Link href="/historia" className="px-8 py-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-black text-[11px] tracking-widest uppercase hover:bg-white/20 transition-all">
                 Historia
               </Link>
             </div>
@@ -278,95 +278,42 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Historia Section */}
-      <section id="historia" className="py-20 bg-white relative reveal overflow-hidden">
+      {/* Historia Teaser Section */}
+      <section className="py-24 bg-white relative reveal overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            {/* Imagen principal */}
-            <div className="relative group">
-              <div className="relative rounded-[2.5rem] overflow-hidden shadow-xl bg-gray-100">
+          <div className="bg-gray-50 rounded-[3rem] p-8 md:p-16 relative overflow-hidden flex flex-col md:flex-row items-center gap-12 group">
+            {/* Fondo decorativo */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
+            
+            <div className="flex-1 relative z-10">
+              <span className="text-[#004d91] font-black uppercase tracking-widest text-[10px] mb-4 block">Sobre Nosotros</span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-6 leading-tight uppercase tracking-tight text-balance">
+                {historia.titulo || "Creciendo junto a la comunidad"}
+              </h2>
+              <p className="text-gray-500 text-base md:text-lg mb-8 leading-relaxed font-medium line-clamp-4 text-pretty max-w-xl">
+                {historia.texto || defaultHistoriaTexto}
+              </p>
+              
+              <Link href="/historia" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#004d91] text-white font-black text-[11px] tracking-widest uppercase hover:bg-[#003366] transition-all hover:gap-4 shadow-lg shadow-blue-900/20">
+                Conocé nuestra historia <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            
+            <div className="w-full md:w-5/12 lg:w-1/2 relative z-10">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-[4/3] ring-1 ring-black/5 group-hover:-translate-y-2 transition-transform duration-500">
                 <img
                   src={historia.imagen || "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg"}
                   alt="Historia del Complejo"
-                  className="w-full object-cover aspect-[4/3]"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-              </div>
-              {/* Galería de miniaturas */}
-              {historia.galeria && historia.galeria.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mt-4">
-                  {historia.galeria.slice(0, 6).map((media, i) => {
-                    const isVid = media.includes('youtube.com') || media.includes('youtu.be') || media.endsWith('.mp4') || media.endsWith('.webm')
-                    return (
-                      <div
-                        key={i}
-                        className="relative rounded-xl overflow-hidden aspect-video bg-gray-100 cursor-pointer group/thumb hover:ring-2 hover:ring-[#004d91] transition-all"
-                        onClick={() => setLightboxSrc(media)}
-                      >
-                        {isVid ? (
-                          <>
-                            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                              <Play className="w-6 h-6 text-white" />
-                            </div>
-                          </>
-                        ) : (
-                          <img src={media} alt={`Galería ${i + 1}`} className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-500" />
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Texto editable */}
-            <div>
-              <span className="text-[#004d91] font-black uppercase tracking-widest text-[10px] mb-4 block">Sobre Nosotros</span>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-6 leading-tight uppercase tracking-tight">
-                {historia.titulo || "Creciendo junto a la comunidad"}
-              </h2>
-              <div className="space-y-6 text-sm md:text-base text-gray-500 leading-relaxed font-medium">
-                <div
-                  className={`whitespace-pre-wrap transition-all duration-500 overflow-hidden ${historiaExpanded ? '' : 'line-clamp-6'}`}
-                >
-                  {historia.texto || defaultHistoriaTexto}
-                </div>
-                {(historia.texto || '').length > 300 && (
-                  <button
-                    onClick={() => setHistoriaExpanded(!historiaExpanded)}
-                    className="flex items-center gap-2 text-[#004d91] font-black text-xs uppercase tracking-widest hover:gap-3 transition-all group"
-                  >
-                    {historiaExpanded ? 'Leer menos' : 'Leer más'}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${historiaExpanded ? 'rotate-180' : ''}`} />
-                  </button>
-                )}
-                <div className="p-6 rounded-2xl bg-gray-50 border-l-4 border-[#004d91]">
-                  <p className="text-gray-800 font-bold italic text-sm md:text-base">"Acercando la universidad a cada vecino del distrito."</p>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Lightbox para galería historia */}
-      {lightboxSrc && (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightboxSrc(null)}>
-          <button className="absolute top-5 right-5 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all" onClick={() => setLightboxSrc(null)}>
-            <X className="w-6 h-6" />
-          </button>
-          <div className="max-w-4xl w-full max-h-[85vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
-            {lightboxSrc.includes('youtube.com') || lightboxSrc.includes('youtu.be') ? (
-              <div className="w-full aspect-video">
-                {renderMedia(lightboxSrc)}
-              </div>
-            ) : lightboxSrc.endsWith('.mp4') || lightboxSrc.endsWith('.webm') ? (
-              <video controls src={lightboxSrc} className="max-w-full max-h-[80vh] rounded-2xl" />
-            ) : (
-              <img src={lightboxSrc} alt="Galería" className="max-w-full max-h-[80vh] object-contain rounded-2xl" />
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* Carreras Section - Achicado un poco */}
       <section id="carreras" className="py-20 bg-gray-50 reveal">
