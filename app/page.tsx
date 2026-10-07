@@ -74,6 +74,7 @@ export default function Home() {
     imagen: "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg",
     galeria: []
   })
+  const [historiaCarouselIndex, setHistoriaCarouselIndex] = useState(0)
 
   // Modal states
   const [selectedCarrera, setSelectedCarrera] = useState<CarreraExtended | null>(null)
@@ -82,6 +83,15 @@ export default function Home() {
   const [inscripcionesActive, setInscripcionesActive] = useState(false)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+
+  useEffect(() => {
+    const allImages = [historia.imagen, ...(historia.galeria || [])].filter(url => url && !url.includes('youtube') && !url.endsWith('.mp4'));
+    if (allImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setHistoriaCarouselIndex(prev => (prev + 1) % allImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [historia.imagen, historia.galeria]);
 
   useEffect(() => {
     // Load config: inscripciones + historia
@@ -300,13 +310,23 @@ export default function Home() {
             </div>
             
             <div className="w-full md:w-5/12 lg:w-1/2 relative z-10">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-[4/3] ring-1 ring-black/5 group-hover:-translate-y-2 transition-transform duration-500">
-                <img
-                  src={historia.imagen || "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg"}
-                  alt="Historia del Complejo"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-[4/3] ring-1 ring-black/5 group-hover:-translate-y-2 transition-transform duration-500 bg-gray-200">
+                {(() => {
+                  const allImages = [
+                    historia.imagen || "https://alternativaenpapel.com.ar/wp-content/uploads/2023/03/337138575_1772961839767853_985259689309933729_n.jpg", 
+                    ...(historia.galeria || [])
+                  ].filter(url => url && !url.includes('youtube') && !url.endsWith('.mp4'));
+                  const currentImage = allImages[historiaCarouselIndex % allImages.length] || allImages[0];
+                  return (
+                    <img
+                      key={currentImage} // forces re-render for animation
+                      src={currentImage}
+                      alt="Historia del Complejo"
+                      className="w-full h-full object-cover animate-in fade-in duration-1000 group-hover:scale-105 transition-all"
+                    />
+                  )
+                })()}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
               </div>
             </div>
           </div>
