@@ -1159,6 +1159,12 @@ function ConfigTab() {
     }
 
     const uploadHistoriaFile = async (file: File, type: 'image' | 'video') => {
+        const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showNote(`El archivo excede el límite (${type === 'image' ? '5MB' : '50MB'})`);
+            return;
+        }
+
         setIsUploading(true)
         const uploadFormData = new FormData()
         uploadFormData.append('file', file)
