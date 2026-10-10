@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { mkdir } from "fs/promises";
-import { createWriteStream } from "fs";
-import { Readable } from "stream";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -20,29 +20,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large (max 50MB)" }, { status: 413 });
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
     // Create unique filename
-    const ext = path.extname(file.name);
+    const ext = path.extname(file.name).toLowerCase();
     const basename = path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, '');
     const filename = `${Date.now()}-${basename}${ext}`;
     const uploadDir = path.join(process.cwd(), "public/uploads");
     const filepath = path.join(uploadDir, filename);
 
     // Ensure directory exists
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if exists
-    }
+    await mkdir(uploadDir, { recursive: true }).catch(() => {});
 
-    // Stream the file to disk instead of buffering in memory
-    const readableStream = Readable.fromWeb(file.stream() as any);
-    const writeStream = createWriteStream(filepath);
-
-    await new Promise((resolve, reject) => {
-      readableStream.pipe(writeStream)
-        .on('finish', resolve)
-        .on('error', reject);
-    });
+    await writeFile(filepath, buffer);
 
     return NextResponse.json({ url: `/uploads/${filename}` });
   } catch (e) {
@@ -50,4 +46,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
+
 
