@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { mkdir } from "fs/promises";
+import { createWriteStream } from "fs";
+import { Readable } from "stream";
 import path from "path";
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
     const data = await req.formData();
     const file: File | null = data.get('file') as unknown as File;
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
     // Create unique filename
     const ext = path.extname(file.name);
@@ -28,10 +34,20 @@ export async function POST(req: Request) {
       // Ignore if exists
     }
 
-    await writeFile(filepath, buffer);
+    // Stream the file to disk instead of buffering in memory
+    const readableStream = Readable.fromWeb(file.stream() as any);
+    const writeStream = createWriteStream(filepath);
+
+    await new Promise((resolve, reject) => {
+      readableStream.pipe(writeStream)
+        .on('finish', resolve)
+        .on('error', reject);
+    });
 
     return NextResponse.json({ url: `/uploads/${filename}` });
   } catch (e) {
+    console.error("Upload error:", e);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
+
