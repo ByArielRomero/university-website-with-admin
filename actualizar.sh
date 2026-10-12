@@ -15,9 +15,10 @@ echo "==> [1/6] Configurando carpeta /var/www/uploads..."
 mkdir -p /var/www/uploads
 chmod -R 777 /var/www/uploads
 
-# 2. Bajar últimos cambios de git
+# 2. Bajar últimos cambios de git asegurando sincronización limpia con origin
 echo "==> [2/6] Descargando últimos cambios desde GitHub..."
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 
 # 3. Permisos en scripts
 chmod +x setup-nginx.sh actualizar.sh 2>/dev/null || true
