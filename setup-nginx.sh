@@ -96,10 +96,6 @@ else:
     else:
         content = re.sub(r'(server\s*\{)', r'\1\n' + uploads_block, content, count=1)
 
-if 'client_max_body_size' not in content:
-    print("    Configurando client_max_body_size 100M...")
-    content = re.sub(r'(server\s*\{)', r'\1\n    client_max_body_size 100M;', content, count=1)
-
 with open(conf_path, 'w') as f:
     f.write(content)
 EOF
