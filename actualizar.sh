@@ -40,6 +40,11 @@ else
 fi
 echo "    Usando: $COMPOSE_CMD"
 
+# 5.5 Liberar puerto 3001 de procesos huérfanos (como el proceso fantasma 3001 fuera de docker)
+echo "==> Liberando puerto 3001 de procesos anteriores..."
+fuser -k 3001/tcp 2>/dev/null || true
+pkill -f "next start -p 3001" 2>/dev/null || true
+
 # 6. Reconstruir contenedor y levantar
 echo "==> [5/6] Reconstruyendo contenedor de Next.js (esto puede tomar 2-3 minutos)..."
 $COMPOSE_CMD down || true

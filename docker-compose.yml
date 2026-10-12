@@ -6,10 +6,10 @@ services:
     container_name: university-web
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - DATABASE_URL=mysql://admin:password@db:3306/university
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=https://centrouniversitarioexaltacion.com
       - NEXTAUTH_SECRET=changeme_in_production
     depends_on:
       - db

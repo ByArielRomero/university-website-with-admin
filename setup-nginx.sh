@@ -28,6 +28,8 @@ echo "==> 3. Buscando archivo de configuración de Nginx..."
 NGINX_CONF=""
 
 for candidate in \
+    "/etc/nginx/sites-available/centrouniversitario" \
+    "/etc/nginx/sites-enabled/centrouniversitario" \
     "/etc/nginx/sites-available/$DOMAIN" \
     "/etc/nginx/sites-enabled/$DOMAIN" \
     "/etc/nginx/conf.d/$DOMAIN.conf" \
