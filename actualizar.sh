@@ -51,8 +51,19 @@ $COMPOSE_CMD down || true
 $COMPOSE_CMD build --no-cache web
 $COMPOSE_CMD up -d
 
-# 7. Asegurar permisos finales
-echo "==> [6/6] Asegurando permisos de lectura/escritura..."
+# 7. Sincronizar tablas de base de datos MySQL
+echo "==> [6/7] Esperando que MySQL esté listo para sincronizar tablas..."
+for i in $(seq 1 15); do
+    if $COMPOSE_CMD exec -T web npx prisma db push --skip-generate 2>/dev/null; then
+        echo "    Tablas de MySQL creadas/sincronizadas con éxito."
+        $COMPOSE_CMD exec -T web npx prisma db seed 2>/dev/null || true
+        break
+    fi
+    sleep 2
+done
+
+# 8. Asegurar permisos finales
+echo "==> [7/7] Asegurando permisos de lectura/escritura..."
 chmod -R 777 /var/www/uploads
 
 echo ""
