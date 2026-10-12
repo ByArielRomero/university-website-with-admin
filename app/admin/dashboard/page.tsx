@@ -131,9 +131,9 @@ export default function AdminDashboard() {
         if (!file) return;
         e.target.value = '';
 
-        const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+        const maxSize = type === 'image' ? 10 * 1024 * 1024 : 200 * 1024 * 1024;
         if (file.size > maxSize) {
-            showNotification(`El archivo excede el límite de peso (${type === 'image' ? '5MB' : '50MB'})`, 'error');
+            showNotification(`El archivo excede el límite de peso (${type === 'image' ? '10MB' : '200MB'})`, 'error');
             return;
         }
 
@@ -144,8 +144,8 @@ export default function AdminDashboard() {
             
             video.onloadedmetadata = async () => {
                 URL.revokeObjectURL(url);
-                if (video.duration > 120) {
-                    showNotification('El video no puede durar más de 2 minutos', 'error');
+                if (video.duration > 600) {
+                    showNotification('El video no puede durar más de 10 minutos', 'error');
                     return;
                 }
                 await uploadFile(file, type);
@@ -1159,9 +1159,9 @@ function ConfigTab() {
     }
 
     const uploadHistoriaFile = async (file: File, type: 'image' | 'video') => {
-        const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+        const maxSize = type === 'image' ? 10 * 1024 * 1024 : 200 * 1024 * 1024;
         if (file.size > maxSize) {
-            showNote(`El archivo excede el límite (${type === 'image' ? '5MB' : '50MB'})`);
+            showNote(`El archivo excede el límite (${type === 'image' ? '10MB' : '200MB'})`);
             return;
         }
 

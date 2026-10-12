@@ -20,9 +20,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No se proporcionó ningún archivo" }, { status: 400 });
     }
 
-    // Validar peso (50MB max)
-    if (file.size > 50 * 1024 * 1024) {
-      return NextResponse.json({ error: "El archivo es demasiado grande (máximo 50MB)" }, { status: 413 });
+    // Validar peso (200MB max)
+    if (file.size > 200 * 1024 * 1024) {
+      return NextResponse.json({ error: "El archivo es demasiado grande (máximo 200MB)" }, { status: 413 });
     }
 
     const bytes = await file.arrayBuffer();

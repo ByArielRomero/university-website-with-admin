@@ -13,6 +13,10 @@ echo "==> 1. Asegurando directorio de uploads en el host..."
 mkdir -p "$UPLOADS_DIR"
 chmod -R 777 "$UPLOADS_DIR"
 
+echo "==> Configurando límite de subida a 250M en Nginx..."
+mkdir -p /etc/nginx/conf.d
+echo "client_max_body_size 250M;" > /etc/nginx/conf.d/upload_size.conf
+
 echo "==> 2. Migrando uploads existentes del volumen Docker anterior (si existen)..."
 VOLUME_PATH=$(docker volume inspect uploads_data --format '{{ .Mountpoint }}' 2>/dev/null || true)
 if [ -n "$VOLUME_PATH" ] && [ -d "$VOLUME_PATH" ]; then
