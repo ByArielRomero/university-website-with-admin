@@ -1,7 +1,7 @@
 #!/bin/bash
 # ===================================================================
 # Script para configurar Nginx en el VPS de Hostinger
-# Ejecutar UNA sola vez como root en el VPS:
+# Ejecutar como root en el VPS:
 #   bash setup-nginx.sh
 # ===================================================================
 set -e
@@ -9,103 +9,109 @@ set -e
 DOMAIN="centrouniversitarioexaltacion.com"
 UPLOADS_DIR="/var/www/uploads"
 
-echo "==> Creando directorio de uploads..."
+echo "==> 1. Asegurando directorio de uploads en el host..."
 mkdir -p "$UPLOADS_DIR"
-chmod 777 "$UPLOADS_DIR"
+chmod -R 777 "$UPLOADS_DIR"
 
-echo "==> Migrando uploads existentes del volumen Docker (si hay)..."
-# Copiar archivos del volumen anterior si existen
+echo "==> 2. Migrando uploads existentes del volumen Docker anterior (si existen)..."
 VOLUME_PATH=$(docker volume inspect uploads_data --format '{{ .Mountpoint }}' 2>/dev/null || true)
 if [ -n "$VOLUME_PATH" ] && [ -d "$VOLUME_PATH" ]; then
-    echo "    Encontrado volumen en: $VOLUME_PATH"
+    echo "    Encontrado volumen anterior en: $VOLUME_PATH"
     cp -rn "$VOLUME_PATH"/* "$UPLOADS_DIR"/ 2>/dev/null || true
-    echo "    Archivos migrados."
+    chmod -R 777 "$UPLOADS_DIR"
+    echo "    Archivos migrados correctamente."
 else
-    echo "    No se encontró volumen anterior, saltando migración."
+    echo "    No se encontró volumen previo o ya fue migrado."
 fi
 
-echo "==> Configurando Nginx..."
-
-# Buscar el archivo de configuración del sitio
+echo "==> 3. Buscando archivo de configuración de Nginx..."
 NGINX_CONF=""
-if [ -f "/etc/nginx/sites-available/$DOMAIN" ]; then
-    NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
-elif [ -f "/etc/nginx/sites-available/default" ]; then
-    NGINX_CONF="/etc/nginx/sites-available/default"
-elif [ -f "/etc/nginx/conf.d/$DOMAIN.conf" ]; then
-    NGINX_CONF="/etc/nginx/conf.d/$DOMAIN.conf"
-elif [ -f "/etc/nginx/conf.d/default.conf" ]; then
-    NGINX_CONF="/etc/nginx/conf.d/default.conf"
+
+for candidate in \
+    "/etc/nginx/sites-available/$DOMAIN" \
+    "/etc/nginx/sites-enabled/$DOMAIN" \
+    "/etc/nginx/conf.d/$DOMAIN.conf" \
+    "/etc/nginx/sites-available/default" \
+    "/etc/nginx/sites-enabled/default" \
+    "/etc/nginx/conf.d/default.conf"; do
+    if [ -f "$candidate" ]; then
+        NGINX_CONF="$candidate"
+        break
+    fi
+done
+
+if [ -z "$NGINX_CONF" ]; then
+    NGINX_CONF=$(grep -rl "$DOMAIN" /etc/nginx/sites-available/ /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -n 1 || true)
 fi
 
 if [ -z "$NGINX_CONF" ]; then
-    echo "ERROR: No se encontró la configuración de Nginx."
-    echo "Archivos disponibles:"
-    ls /etc/nginx/sites-available/ 2>/dev/null || true
-    ls /etc/nginx/conf.d/ 2>/dev/null || true
-    echo ""
-    echo "Agregá manualmente este bloque DENTRO del 'server { }' de tu dominio:"
-    echo ""
-    echo '    # Servir uploads directamente (imágenes, videos, PDFs)'
-    echo '    location /uploads/ {'
-    echo "        alias $UPLOADS_DIR/;"
-    echo '        expires 30d;'
-    echo '        add_header Cache-Control "public, immutable";'
-    echo '        add_header Access-Control-Allow-Origin *;'
-    echo '    }'
-    echo ""
-    echo '    client_max_body_size 100M;'
-    exit 1
+    NGINX_CONF=$(grep -rl "3000" /etc/nginx/sites-available/ /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -n 1 || true)
 fi
 
-echo "    Archivo de configuración: $NGINX_CONF"
-echo "    Haciendo backup..."
-cp "$NGINX_CONF" "${NGINX_CONF}.bak.$(date +%s)"
+if [ -z "$NGINX_CONF" ]; then
+    echo "AVISO: No se detectó automáticamente el archivo de configuración de Nginx."
+    echo "Archivos encontrados en /etc/nginx:"
+    ls -la /etc/nginx/sites-available/ 2>/dev/null || true
+    ls -la /etc/nginx/conf.d/ 2>/dev/null || true
+    echo "Next.js servirá los uploads mediante su handler interno como fallback."
+    exit 0
+fi
 
-# Verificar si ya tiene la directiva de uploads
-if grep -q "location /uploads/" "$NGINX_CONF"; then
-    echo "    Ya existe un bloque 'location /uploads/' — actualizando..."
-    # Reemplazar el bloque existente con sed
-    sed -i '/location \/uploads\//,/}/c\
-    # Servir uploads directamente (imágenes, videos, PDFs)\
-    location /uploads/ {\
-        alias /var/www/uploads/;\
-        expires 30d;\
-        add_header Cache-Control "public, immutable";\
-        add_header Access-Control-Allow-Origin *;\
-    }' "$NGINX_CONF"
+# Resolver symlink si apunta a sites-available
+REAL_CONF=$(readlink -f "$NGINX_CONF")
+echo "    Archivo encontrado: $REAL_CONF"
+
+# Backup
+cp "$REAL_CONF" "${REAL_CONF}.bak.$(date +%s)"
+echo "    Backup creado."
+
+# Configurar mediante Python para evitar problemas de sintaxis
+python3 - <<EOF
+import re
+
+conf_path = "$REAL_CONF"
+with open(conf_path, 'r') as f:
+    content = f.read()
+
+uploads_block = '''    # Servir uploads directamente desde disco (imagenes, videos, PDFs)
+    location /uploads/ {
+        alias /var/www/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        add_header Access-Control-Allow-Origin *;
+    }
+'''
+
+if 'location /uploads/' in content:
+    print("    Actualizando bloque 'location /uploads/' existente...")
+    content = re.sub(r'location\s+/uploads/\s*\{[^}]*\}', uploads_block.strip(), content)
+else:
+    print("    Insertando bloque 'location /uploads/'...")
+    if 'location / {' in content:
+        content = re.sub(r'(location\s+/\s*\{)', uploads_block + r'\n    \1', content, count=1)
+    elif 'location /' in content:
+        content = re.sub(r'(location\s+/[^{]*\{)', uploads_block + r'\n    \1', content, count=1)
+    else:
+        content = re.sub(r'(server\s*\{)', r'\1\n' + uploads_block, content, count=1)
+
+if 'client_max_body_size' not in content:
+    print("    Configurando client_max_body_size 100M...")
+    content = re.sub(r'(server\s*\{)', r'\1\n    client_max_body_size 100M;', content, count=1)
+
+with open(conf_path, 'w') as f:
+    f.write(content)
+EOF
+
+echo "==> 4. Verificando sintaxis de Nginx..."
+if nginx -t; then
+    echo "==> 5. Recargando Nginx..."
+    systemctl reload nginx
+    echo "✅ Nginx configurado exitosamente para servir /var/www/uploads/ directamente."
 else
-    echo "    Insertando bloque 'location /uploads/' en la configuración..."
-    # Insertar ANTES de la primera 'location /' que proxea a Next.js
-    sed -i '/location \/ {/i\
-    # Servir uploads directamente (imágenes, videos, PDFs)\
-    location /uploads/ {\
-        alias /var/www/uploads/;\
-        expires 30d;\
-        add_header Cache-Control "public, immutable";\
-        add_header Access-Control-Allow-Origin *;\
-    }\
-' "$NGINX_CONF"
+    echo "⚠️ Error al probar configuración de Nginx. Restaurando backup..."
+    LATEST_BAK=$(ls -t "${REAL_CONF}.bak."* 2>/dev/null | head -n 1)
+    if [ -n "$LATEST_BAK" ]; then
+        cp "$LATEST_BAK" "$REAL_CONF"
+        echo "Backup restaurado."
+    fi
 fi
-
-# Agregar client_max_body_size si no existe
-if ! grep -q "client_max_body_size" "$NGINX_CONF"; then
-    echo "    Agregando client_max_body_size 100M..."
-    sed -i '/server {/a\    client_max_body_size 100M;' "$NGINX_CONF"
-fi
-
-echo "==> Verificando configuración de Nginx..."
-nginx -t
-
-echo "==> Recargando Nginx..."
-systemctl reload nginx
-
-echo ""
-echo "✅ ¡Nginx configurado! Las imágenes en /var/www/uploads/ se sirven directamente."
-echo ""
-echo "Ahora ejecutá:"
-echo "  cd /var/www/university-website-with-admin"
-echo "  git pull"
-echo "  docker-compose down"
-echo "  docker-compose build --no-cache web"
-echo "  docker-compose up -d"
