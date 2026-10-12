@@ -18,12 +18,17 @@ const CONTENT_TYPES: Record<string, string> = {
 
 export const dynamic = "force-dynamic";
 
-const uploadRoot = () => path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), "public/uploads"));
+const configuredUploadRoot = () =>
+  path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), "public/uploads"));
 
-function safeFilePath(parts: string[]) {
-  const root = uploadRoot();
-  const requested = path.resolve(root, ...parts);
-  return requested === root || requested.startsWith(`${root}${path.sep}`) ? requested : null;
+function safeFilePaths(parts: string[]) {
+  const roots = [configuredUploadRoot(), path.resolve(process.cwd(), "public/uploads")];
+  const uniqueRoots = [...new Set(roots)];
+  const paths = uniqueRoots.map((root) => {
+    const requested = path.resolve(root, ...parts);
+    return requested === root || requested.startsWith(`${root}${path.sep}`) ? requested : null;
+  });
+  return paths.filter((value): value is string => Boolean(value));
 }
 
 export async function GET(
@@ -31,27 +36,32 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path: parts } = await params;
-  const filePath = safeFilePath(parts);
+  const filePaths = safeFilePaths(parts);
 
-  if (!filePath) return new NextResponse("Not found", { status: 404 });
+  if (filePaths.length === 0) return new NextResponse("Not found", { status: 404 });
 
-  try {
-    const file = await fs.readFile(filePath);
-    const contentType = CONTENT_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
+  for (const filePath of filePaths) {
+    try {
+      const file = await fs.readFile(filePath);
+      const contentType = CONTENT_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
 
-    return new NextResponse(file, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000, immutable",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
-  } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
-    if (code === "ENOENT" || code === "EISDIR") return new NextResponse("Not found", { status: 404 });
-    console.error("Media read error:", error);
-    return new NextResponse("Unable to read media", { status: 500 });
+      return new NextResponse(file, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      if (code !== "ENOENT" && code !== "EISDIR") {
+        console.error("Media read error:", error);
+        return new NextResponse("Unable to read media", { status: 500 });
+      }
+    }
   }
+
+  return new NextResponse("Not found", { status: 404 });
 }
 
 export async function HEAD(

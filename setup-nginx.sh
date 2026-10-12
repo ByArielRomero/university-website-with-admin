@@ -13,7 +13,9 @@ echo "==> Creando directorio de uploads..."
 mkdir -p "$UPLOADS_DIR"
 # El contenedor usa un usuario no-root; el grupo permite escritura sin abrir el directorio al mundo.
 chown -R 1001:1001 "$UPLOADS_DIR" 2>/dev/null || true
-chmod 775 "$UPLOADS_DIR"
+find "$UPLOADS_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$UPLOADS_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
+chmod 755 "$UPLOADS_DIR"
 
 echo "==> Migrando uploads existentes del volumen Docker (si hay)..."
 # Copiar archivos del volumen anterior si existen
@@ -49,7 +51,7 @@ if [ -z "$NGINX_CONF" ]; then
     echo "Agregá manualmente este bloque DENTRO del 'server { }' de tu dominio:"
     echo ""
     echo '    # Servir uploads directamente (imágenes, videos, PDFs)'
-    echo '    location /uploads/ {'
+    echo '    location ^~ /uploads/ {'
     echo "        alias $UPLOADS_DIR/;"
     echo '        expires 30d;'
     echo '        add_header Cache-Control "public, immutable";'
@@ -73,7 +75,7 @@ if grep -q "location /uploads/" "$NGINX_CONF"; then
     # Reemplazar el bloque existente con sed
     sed -i '/location \/uploads\//,/}/c\
     # Servir uploads directamente (imágenes, videos, PDFs)\
-    location /uploads/ {\
+    location ^~ /uploads/ {\
         alias /var/www/uploads/;\
         expires 30d;\
         add_header Cache-Control "public, immutable";\
@@ -84,7 +86,7 @@ else
     # Insertar ANTES de la primera 'location /' que proxea a Next.js
     sed -i '/location \/ {/i\
     # Servir uploads directamente (imágenes, videos, PDFs)\
-    location /uploads/ {\
+    location ^~ /uploads/ {\
         alias /var/www/uploads/;\
         expires 30d;\
         add_header Cache-Control "public, immutable";\
