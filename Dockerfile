@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -11,7 +12,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Generate database client first
+# Generate database client with Alpine OpenSSL 3.x support
 RUN npx prisma generate
 RUN npm run build
 
@@ -20,29 +21,27 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN apk add --no-cache su-exec
-
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
-RUN mkdir -p public/uploads
-RUN chown -R nextjs:nodejs public/uploads && chmod -R 777 public/uploads
+
+# Create uploads directory with full permissions
+RUN mkdir -p /app/public/uploads
+RUN chmod 777 /app/public/uploads
 
 # Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+USER nextjs
 
 EXPOSE 3000
 
 ENV PORT=3000
 
-ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["node", "server.js"]
