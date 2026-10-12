@@ -8,7 +8,7 @@ export async function deleteFileFromUrl(url: string | null | undefined) {
         // Validate filename to prevent path traversal
         if (filename.includes('..') || filename.includes('/')) return;
         
-        const uploadDir = path.join(process.cwd(), "public/uploads");
+        const uploadDir = process.env.UPLOADS_DIR || path.join(process.cwd(), "public/uploads");
         const filepath = path.join(uploadDir, filename);
         await fs.unlink(filepath);
     } catch (e) {

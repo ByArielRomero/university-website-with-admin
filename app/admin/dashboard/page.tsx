@@ -131,9 +131,9 @@ export default function AdminDashboard() {
         if (!file) return;
         e.target.value = '';
 
-        const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+        const maxSize = 500 * 1024 * 1024;
         if (file.size > maxSize) {
-            showNotification(`El archivo excede el límite de peso (${type === 'image' ? '5MB' : '50MB'})`, 'error');
+            showNotification('El archivo excede el límite de peso (500MB)', 'error');
             return;
         }
 
@@ -1159,9 +1159,9 @@ function ConfigTab() {
     }
 
     const uploadHistoriaFile = async (file: File, type: 'image' | 'video') => {
-        const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
-        if (file.size > maxSize) {
-            showNote(`El archivo excede el límite (${type === 'image' ? '5MB' : '50MB'})`);
+const maxSize = 500 * 1024 * 1024;
+  if (file.size > maxSize) {
+  showNote('El archivo excede el límite (500MB)');
             return;
         }
 

@@ -11,7 +11,9 @@ UPLOADS_DIR="/var/www/uploads"
 
 echo "==> Creando directorio de uploads..."
 mkdir -p "$UPLOADS_DIR"
-chmod 777 "$UPLOADS_DIR"
+# El contenedor usa un usuario no-root; el grupo permite escritura sin abrir el directorio al mundo.
+chown -R 1001:1001 "$UPLOADS_DIR" 2>/dev/null || true
+chmod 775 "$UPLOADS_DIR"
 
 echo "==> Migrando uploads existentes del volumen Docker (si hay)..."
 # Copiar archivos del volumen anterior si existen
@@ -54,7 +56,10 @@ if [ -z "$NGINX_CONF" ]; then
     echo '        add_header Access-Control-Allow-Origin *;'
     echo '    }'
     echo ""
-    echo '    client_max_body_size 100M;'
+    echo '    client_max_body_size 512M;'
+    echo '    client_body_timeout 600s;'
+    echo '    proxy_read_timeout 600s;'
+    echo '    proxy_send_timeout 600s;'
     exit 1
 fi
 
@@ -90,8 +95,11 @@ fi
 
 # Agregar client_max_body_size si no existe
 if ! grep -q "client_max_body_size" "$NGINX_CONF"; then
-    echo "    Agregando client_max_body_size 100M..."
-    sed -i '/server {/a\    client_max_body_size 100M;' "$NGINX_CONF"
+    echo "    Agregando límites de carga y proxy..."
+    sed -i '/server {/a\    client_max_body_size 512M;
+    client_body_timeout 600s;
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;' "$NGINX_CONF"
 fi
 
 echo "==> Verificando configuración de Nginx..."
