@@ -67,6 +67,7 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false)
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("Todas")
   const [carreraFiltro, setCarreraFiltro] = useState<string>("Todas")
+  const [carrerasExpandidas, setCarrerasExpandidas] = useState(false)
   const [historiaExpanded, setHistoriaExpanded] = useState(false)
   const [historia, setHistoria] = useState<HistoriaConfig>({
     titulo: "Creciendo junto a la comunidad",
@@ -83,6 +84,11 @@ export default function Home() {
   const [inscripcionesActive, setInscripcionesActive] = useState(false)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+
+  // Reset "ver más" when filter changes
+  useEffect(() => {
+    setCarrerasExpandidas(false)
+  }, [carreraFiltro])
 
   useEffect(() => {
     const allImages = [historia.imagen, ...(historia.galeria || [])].filter(url => url && !url.includes('youtube') && !url.endsWith('.mp4'));
@@ -355,83 +361,119 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {carreras.filter(c => carreraFiltro === "Todas" || (c.tipo || "Carrera") === carreraFiltro).map((carrera, index) => {
-              if (carrera.activa === false) return null
-              const abierta = carrera.inscripcionAbierta !== false
-              return (
-                <div key={carrera.id}
-                  className={`group bg-white rounded-[2rem] overflow-hidden shadow-md transition-all duration-300 flex flex-col h-full border cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-                    abierta ? 'border-gray-100' : 'border-gray-100 opacity-75'
-                  }`}
-                  onClick={() => { setSelectedCarrera(carrera); setCurrentImageIndex(0); }}>
+          {/* Carreras grid */}
+          {(() => {
+            const filtradas = carreras.filter(c => {
+              if (c.activa === false) return false
+              return carreraFiltro === "Todas" || (c.tipo || "Carrera") === carreraFiltro
+            })
+            const LIMITE = 6
+            const visibles = carrerasExpandidas ? filtradas : filtradas.slice(0, LIMITE)
+            const hayMas = filtradas.length > LIMITE
 
-                  <div className="h-48 relative overflow-hidden bg-gray-100">
-                    {(() => {
-                      const firstMedia = carrera.imagenes?.[0] || carrera.imagen;
-                      const isVid = firstMedia && (firstMedia.endsWith('.mp4') || firstMedia.endsWith('.webm') || firstMedia.includes('youtube.com') || firstMedia.includes('youtu.be'));
-                      if (isVid) {
-                        return (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-900 group-hover:scale-105 transition-transform duration-700">
-                            <div className="absolute inset-0 bg-gray-800 opacity-60" />
-                            <Play className="w-12 h-12 text-white relative z-10" />
+            return (
+              <>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {visibles.map((carrera, index) => {
+                    const abierta = carrera.inscripcionAbierta !== false
+                    return (
+                      <div key={carrera.id}
+                        className={`group bg-white rounded-[2rem] overflow-hidden shadow-md transition-all duration-300 flex flex-col h-full border cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
+                          abierta ? 'border-gray-100' : 'border-gray-100 opacity-75'
+                        }`}
+                        onClick={() => { setSelectedCarrera(carrera); setCurrentImageIndex(0); }}>
+
+                        <div className="h-48 relative overflow-hidden bg-gray-100">
+                          {(() => {
+                            const firstMedia = carrera.imagenes?.[0] || carrera.imagen;
+                            const isVid = firstMedia && (firstMedia.endsWith('.mp4') || firstMedia.endsWith('.webm') || firstMedia.includes('youtube.com') || firstMedia.includes('youtu.be'));
+                            if (isVid) {
+                              return (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-900 group-hover:scale-105 transition-transform duration-700">
+                                  <div className="absolute inset-0 bg-gray-800 opacity-60" />
+                                  <Play className="w-12 h-12 text-white relative z-10" />
+                                </div>
+                              );
+                            }
+                            return <img src={carrera.imagen} alt={carrera.nombre} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!abierta ? 'grayscale-[30%]' : ''}`} />;
+                          })()}
+                          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent"></div>
+                          <div className="absolute top-4 left-4">
+                            <span className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest shadow-sm ${carrera.tipo === 'Curso' ? 'bg-amber-400 text-amber-900' : 'bg-blue-600 text-white'}`}>
+                              {carrera.tipo || 'Carrera'}
+                            </span>
                           </div>
-                        );
-                      }
-                      return <img src={carrera.imagen} alt={carrera.nombre} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!abierta ? 'grayscale-[30%]' : ''}`} />;
-                    })()}
-                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest shadow-sm ${carrera.tipo === 'Curso' ? 'bg-amber-400 text-amber-900' : 'bg-blue-600 text-white'}`}>
-                        {carrera.tipo || 'Carrera'}
-                      </span>
-                    </div>
-                    <div className="absolute bottom-4 left-4">
-                      <span className="px-4 py-1.5 rounded-lg bg-blue-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm">
-                        {carrera.modalidad}
-                      </span>
-                    </div>
-                    {!abierta && (
-                      <div className="absolute top-4 right-4">
-                        <span className="px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest bg-gray-700/80 text-gray-200 backdrop-blur-sm">
-                          Finalizada
-                        </span>
+                          <div className="absolute bottom-4 left-4">
+                            <span className="px-4 py-1.5 rounded-lg bg-blue-600/90 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-sm">
+                              {carrera.modalidad}
+                            </span>
+                          </div>
+                          {!abierta && (
+                            <div className="absolute top-4 right-4">
+                              <span className="px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest bg-gray-700/80 text-gray-200 backdrop-blur-sm">
+                                Finalizada
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-10 flex flex-col flex-grow">
+                          <h3 className="text-xl md:text-2xl font-black mb-4 leading-tight uppercase tracking-tight transition-colors group-hover:text-[#004d91]">{carrera.nombre}</h3>
+                          <p className="text-gray-400 text-sm line-clamp-3 mb-8 flex-grow font-medium leading-relaxed">{carrera.descripcion}</p>
+                          <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
+                            {abierta ? (
+                              <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                <span className="text-green-600">Inscripciones abiertas</span>
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                                <span className="text-gray-400">Finalizada</span>
+                              </span>
+                            )}
+                            <ChevronRight className="w-5 h-5 text-[#004d91] group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="p-10 flex flex-col flex-grow">
-                    <h3 className="text-xl md:text-2xl font-black mb-4 leading-tight uppercase tracking-tight transition-colors group-hover:text-[#004d91]">{carrera.nombre}</h3>
-                    <p className="text-gray-400 text-sm line-clamp-3 mb-8 flex-grow font-medium leading-relaxed">{carrera.descripcion}</p>
-                    <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
-                      {abierta ? (
-                        <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                          <span className="text-green-600">Inscripciones abiertas</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                          <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                          <span className="text-gray-400">Finalizada</span>
-                        </span>
-                      )}
-                      <ChevronRight className="w-5 h-5 text-[#004d91] group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
 
-          {carreras.filter(c => carreraFiltro === "Todas" || (c.tipo || "Carrera") === carreraFiltro).length === 0 && (
-            <div className="col-span-full py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200 mt-8">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <BookOpen className="w-10 h-10 text-gray-300" />
-              </div>
-              <h3 className="text-xl font-black text-gray-400 uppercase tracking-widest mb-2">No hay disponibles</h3>
-              <p className="text-gray-400 text-sm font-medium">No se encontraron {carreraFiltro === "Todas" ? "carreras ni cursos" : (carreraFiltro === "Carrera" ? "carreras" : "cursos")} para mostrar.</p>
-            </div>
-          )}
+                {/* Ver más / Ver menos */}
+                {hayMas && (
+                  <div className="flex justify-center mt-10">
+                    <button
+                      onClick={() => setCarrerasExpandidas(prev => !prev)}
+                      className="group flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-white border-2 border-[#004d91]/20 text-[#004d91] font-black text-xs uppercase tracking-widest hover:bg-[#004d91] hover:text-white hover:border-[#004d91] transition-all duration-300 shadow-sm hover:shadow-lg"
+                    >
+                      {carrerasExpandidas ? (
+                        <>
+                          <ChevronDown className="w-4 h-4 rotate-180 transition-transform duration-300" />
+                          Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5" />
+                          Ver {filtradas.length - LIMITE} más
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {filtradas.length === 0 && (
+                  <div className="py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200 mt-8">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <BookOpen className="w-10 h-10 text-gray-300" />
+                    </div>
+                    <h3 className="text-xl font-black text-gray-400 uppercase tracking-widest mb-2">No hay disponibles</h3>
+                    <p className="text-gray-400 text-sm font-medium">No se encontraron {carreraFiltro === "Todas" ? "carreras ni cursos" : (carreraFiltro === "Carrera" ? "carreras" : "cursos")} para mostrar.</p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
       </section>
 

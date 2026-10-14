@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import {
     GraduationCap, BookOpen, Newspaper, Plus, Pencil, Trash2,
     LogOut, Home, Clock, Award, Image as ImageIcon, X, Save,
-    ChevronLeft, ChevronRight, Upload, HelpCircle, Settings, Star, Video, CheckCircle2
+    ChevronLeft, ChevronRight, Upload, HelpCircle, Settings, Star, Video, CheckCircle2,
+    GripVertical
 } from "lucide-react"
 import { defaultHistoriaTexto } from "../../defaultHistoria"
 
@@ -23,6 +24,7 @@ interface Carrera {
     inscripcionAbierta?: boolean
     activa?: boolean
     linkInscripcion?: string
+    orden?: number
 }
 
 interface Novedad {
@@ -70,6 +72,11 @@ export default function AdminDashboard() {
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
     const router = useRouter()
+
+    // Drag & drop state
+    const dragItem = useRef<number | null>(null)
+    const dragOverItem = useRef<number | null>(null)
+    const [isDragging, setIsDragging] = useState<number | null>(null)
 
     // Notification helper
     const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -393,6 +400,40 @@ export default function AdminDashboard() {
         showNotification("Elemento eliminado correctamente")
     }
 
+    const handleDragStart = (index: number) => {
+        dragItem.current = index
+        setIsDragging(index)
+    }
+
+    const handleDragEnter = (index: number) => {
+        dragOverItem.current = index
+        if (dragItem.current !== null && dragItem.current !== index) {
+            const newCarreras = [...carreras]
+            const draggedItem = newCarreras.splice(dragItem.current, 1)[0]
+            newCarreras.splice(index, 0, draggedItem)
+            dragItem.current = index
+            setCarreras(newCarreras)
+        }
+    }
+
+    const handleDragEnd = async () => {
+        setIsDragging(null)
+        dragItem.current = null
+        dragOverItem.current = null
+        // Persist new order to DB
+        const reorderData = carreras.map((c, index) => ({ id: c.id, orden: index }))
+        try {
+            await fetch('/api/carreras/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reorderData)
+            })
+            showNotification('✓ Orden guardado correctamente')
+        } catch {
+            showNotification('Error al guardar el orden', 'error')
+        }
+    }
+
     if (!isAuthenticated) {
         return null
     }
@@ -518,51 +559,77 @@ export default function AdminDashboard() {
                         <div className="divide-y divide-gray-100">
                             {activeTab === "carreras" ? (
                                 carreras.length > 0 ? (
-                                    carreras.map((carrera) => (
-                                        <div key={carrera.id} className="p-6 flex items-center gap-6 hover:bg-gray-50 transition-colors">
-                                            <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                                                {carrera.imagen ? (
-                                                    <img src={carrera.imagen} alt={carrera.nombre} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                        <ImageIcon className="w-8 h-8" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex-grow min-w-0">
-                                                <h3 className="font-bold text-gray-900 mb-1">{carrera.nombre}</h3>
-                                                <p className="text-gray-500 text-sm mb-2">{carrera.facultad}</p>
-                                                <div className="flex items-center gap-4 text-xs text-gray-400">
-                                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {carrera.duracion}</span>
-                                                    <span className="flex items-center gap-1"><Award className="w-3 h-3" /> {carrera.modalidad}</span>
-                                                    {carrera.imagenes && carrera.imagenes.length > 1 && (
-                                                        <span className="flex items-center gap-1"><ImageIcon className="w-3 h-3" /> {carrera.imagenes.length} fotos</span>
+                                    <>
+                                        <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+                                            <GripVertical className="w-4 h-4 text-blue-400" />
+                                            <p className="text-xs font-semibold text-blue-600">Arrastrá las filas para cambiar el orden en que aparecen en el sitio</p>
+                                        </div>
+                                        {carreras.map((carrera, index) => (
+                                            <div
+                                                key={carrera.id}
+                                                draggable
+                                                onDragStart={() => handleDragStart(index)}
+                                                onDragEnter={() => handleDragEnter(index)}
+                                                onDragEnd={handleDragEnd}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                className={`p-6 flex items-center gap-4 transition-all duration-150 ${
+                                                    isDragging === index
+                                                        ? 'opacity-50 bg-blue-50 scale-[0.99] shadow-inner'
+                                                        : 'hover:bg-gray-50'
+                                                }`}
+                                                style={{ cursor: isDragging !== null ? 'grabbing' : 'default' }}
+                                            >
+                                                {/* Drag handle */}
+                                                <div
+                                                    className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 cursor-grab active:cursor-grabbing"
+                                                    title="Arrastrá para reordenar"
+                                                >
+                                                    <GripVertical className="w-5 h-5" />
+                                                </div>
+                                                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                                                    {carrera.imagen ? (
+                                                        <img src={carrera.imagen} alt={carrera.nombre} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                            <ImageIcon className="w-6 h-6" />
+                                                        </div>
                                                     )}
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
-                                                        carrera.inscripcionAbierta !== false
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-gray-100 text-gray-500'
-                                                    }`}>
-                                                        {carrera.inscripcionAbierta !== false ? '✓ Inscripciones abiertas' : '✕ Finalizada'}
-                                                    </span>
+                                                </div>
+                                                <div className="flex-grow min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${
+                                                            carrera.tipo === 'Curso' ? 'bg-amber-100 text-amber-700' :
+                                                            carrera.tipo === 'Diplomatura' ? 'bg-purple-100 text-purple-700' :
+                                                            'bg-blue-100 text-blue-700'
+                                                        }`}>{carrera.tipo || 'Carrera'}</span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${
+                                                            carrera.inscripcionAbierta !== false
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-500'
+                                                        }`}>
+                                                            {carrera.inscripcionAbierta !== false ? '✓ Abierta' : '✕ Finalizada'}
+                                                        </span>
+                                                    </div>
+                                                    <h3 className="font-bold text-gray-900 mb-1 truncate">{carrera.nombre}</h3>
+                                                    <p className="text-gray-400 text-xs truncate">{carrera.facultad} · {carrera.duracion} · {carrera.modalidad}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <button
+                                                        onClick={() => openEditModal(carrera)}
+                                                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteConfirm(carrera.id)}
+                                                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(carrera)}
-                                                    className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                                >
-                                                    <Pencil className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteConfirm(carrera.id)}
-                                                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </>
                                 ) : (
                                     <div className="p-12 text-center text-gray-500">
                                         <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />

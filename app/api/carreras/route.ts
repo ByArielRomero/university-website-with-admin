@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 export async function GET() {
     try {
         const carreras = await prisma.carrera.findMany({
-            orderBy: { createdAt: "desc" }
+            orderBy: { orden: "asc" }
         })
         return NextResponse.json(carreras)
     } catch (error) {
@@ -21,6 +21,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 })
         }
         const data = await req.json()
+
+        // Auto-assign next orden value
+        const maxOrden = await prisma.carrera.aggregate({ _max: { orden: true } })
+        const nextOrden = (maxOrden._max.orden ?? -1) + 1
+
         const carrera = await prisma.carrera.create({
             data: {
                 nombre: data.nombre,
@@ -34,6 +39,7 @@ export async function POST(req: Request) {
                 inscripcionAbierta: data.inscripcionAbierta ?? true,
                 activa: data.activa ?? true,
                 linkInscripcion: data.linkInscripcion || null,
+                orden: nextOrden,
             },
         })
         return NextResponse.json(carrera)
@@ -41,3 +47,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Error al crear carrera" }, { status: 500 })
     }
 }
+

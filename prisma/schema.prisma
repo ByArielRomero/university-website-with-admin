@@ -33,6 +33,7 @@ model Carrera {
   inscripcionAbierta Boolean  @default(true)
   tipo               String   @default("Carrera")
   linkInscripcion    String?
+  orden              Int      @default(0)
 }
 
 model SystemConfig {
