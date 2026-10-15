@@ -141,12 +141,8 @@ export default function AdminLogin() {
                         </button>
                     </form>
 
-                    {/* Help Text */}
-                    <div className="mt-6 text-center">
-                        <p className="text-white/40 text-xs">
-                            Credenciales por defecto: <span className="text-white/60">admin / admin123</span>
-                        </p>
-                    </div>
+
+
                 </div>
 
                 {/* Back to Home */}

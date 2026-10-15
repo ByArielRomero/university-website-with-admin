@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 }
 
 import Providers from './providers'
+import GoogleAnalytics from '@/components/google-analytics'
 
 // ... existing code ...
 
@@ -32,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`} suppressHydrationWarning={true}>
+        <GoogleAnalytics />
         <Providers>
           {children}
         </Providers>
